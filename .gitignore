@@ -28,5 +28,5 @@ coverage
 *.sw?
 
 sample
-*.json
+src/assets/*.json
 *.png
