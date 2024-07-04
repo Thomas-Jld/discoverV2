@@ -223,8 +223,6 @@ function updateVisibleRange() {
     visibleRangeDiv.style.height = `${r}px`;
     visibleRangeDiv.style.top = `${y}px`;
     visibleRangeDiv.style.left = `${x}px`;
-
-    console.log(x, y, r);
 }
 
 updateVisibleRange();
@@ -337,6 +335,11 @@ img.addEventListener('pointerdown', (event) => {
     camera.position.z = event.offsetY / 600;
     camera.lookAt(camera.position.x, 0, camera.position.z);
 
+    const arsNewPos = planeToCanvasCoordinates(currentPos.x, currentPos.z);
+    const arsPrevR = parseFloat(audibleRangeDiv.style.width);
+    const arsR = isNaN(arsPrevR) ? planeToCanvasSize(audibleRangeSlider.value) : arsPrevR;
+
+    updateAudibleRange(arsNewPos.x - arsR / 2, arsNewPos.y - arsR / 2, arsR);
     updateVisibleRange();
 });
 
