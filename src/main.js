@@ -16,8 +16,8 @@ var STARTING_POINT = [0.66944, 0.8356167];
 
 
 
-const searchLimit = 100;
-const maxAudio = 30;
+const searchLimit = 30;
+const maxAudio = 10;
 
 let MODE = 'manual';
 
@@ -245,11 +245,12 @@ function loadAudio() {
 }
 
 // Loading loop: play the next audio in the queue every few seconds, based on the number of simultaneous audio
-let loadingLoop = () => {
-    loadAudio();
-    setTimeout(loadingLoop, 200);
-}
-loadingLoop();
+// let loadingLoop = () => {
+//     loadAudio();
+//     setTimeout(loadingLoop, 200);
+// }
+// loadingLoop();
+setInterval(loadAudio, 300);
 // *************** Audio *************** //
 
 
