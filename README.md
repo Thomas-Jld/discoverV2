@@ -2,7 +2,7 @@
 
 ## Setup
 
-Place the symlink to the dataset in /public/, with the name `sample`.
+Place the symlink to the dataset in `/public/`, with the name `sample`.
 
 Place a cover image in `/public/{name_of_image}.jpg`.
 
