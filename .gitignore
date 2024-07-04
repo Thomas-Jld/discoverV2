@@ -30,3 +30,4 @@ coverage
 sample
 src/assets/*.json
 *.png
+.vscode
