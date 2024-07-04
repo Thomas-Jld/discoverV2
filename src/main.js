@@ -372,6 +372,13 @@ function moveAlongPath() {
     if (progressOnSegment >= 1) {
         currentPathIndex += 1;
         progressOnSegment = 0;
+
+        if (currentPathIndex >= autoPath.length - 1) {
+            currentPathIndex = 0;
+            progressOnSegment = 0;
+
+            // manualModeButton.click();
+        }
     }
 }
 
@@ -379,7 +386,7 @@ setInterval(moveAlongPath, 1000 / 60);
 
 function clearPath() {
     autoPath.length = 0;
-    autoPathGroup.children.length = 0;
+    autoPathGroup.remove(...autoPathGroup.children);
     currentPathIndex = 0;
     progressOnSegment = 0;
 }
@@ -545,6 +552,8 @@ playModeButton.addEventListener('click', () => {
 });
 
 clearPathButton.addEventListener('click', () => {
+    clearPath();
+
     MODE = 'manual';
     if (manualModeButton.classList.contains('selected-button')) return;
 
@@ -552,7 +561,6 @@ clearPathButton.addEventListener('click', () => {
     drawModeButton.classList.remove('selected-button');
     playModeButton.classList.remove('selected-button');
 
-    clearPath();
 });
 
 restartPathButton.addEventListener('click', () => {
