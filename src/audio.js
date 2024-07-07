@@ -15,17 +15,8 @@ gainModeSelect.addEventListener("change", () => {
 export class AudioEngine {
     constructor(filenames) {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.listener = this.audioContext.listener;
-        this.panningModel = 'HRTF';
-        this.distanceModel = 'linear';
-        this.maxDistance = 10000;
-        this.refDistance = 0.01;
-        this.rollOff = 10;
 
-        this.lastPlayedRank = -1;
         this.currentlyPlaying = 0;
-        this.nodeNumber = 0;
-        this.audioDuration = 5;
 
         this.filenames = filenames;
         this.playingFiles = [];
@@ -119,7 +110,7 @@ export class AudioEngine {
                 if (source) {
                     source.gainNode.gain.value = gain;
                 }
-                console.log(`Setting gain for ${this.filenames[idx]} to ${gain}`);
+                // console.log(`Setting gain for ${this.filenames[idx]} to ${gain}`);
             }
         }
 
@@ -150,7 +141,6 @@ export class AudioEngine {
         if (this.playingFiles.includes(file)) return;
         this.playingFiles.push(file);
         this.currentlyPlaying += 1;
-        this.lastPlayedRank += 1;
 
         // Use fetch to retrieve the audio file
         fetch(url)
@@ -173,14 +163,6 @@ export class AudioEngine {
 
             source.connect(gainNode);
             gainNode.connect(this.audioContext.destination);
-            // let start = this.audioContext.currentTime;
-            // let end = start + audioBuffer.duration;
-            // let fadeDuration = 0.0;
-            // let maxGain = guiParameters.volume;
-            // gainNode.gain.linearRampToValueAtTime(0.01, start);
-            // gainNode.gain.linearRampToValueAtTime(maxGain, start + fadeDuration);
-            // gainNode.gain.linearRampToValueAtTime(maxGain, end - fadeDuration);
-            // gainNode.gain.linearRampToValueAtTime(0.01, end);
 
             source.buffer = audioBuffer;
 
@@ -206,6 +188,7 @@ export class AudioEngine {
             this.sources.push(source);
         }) .catch(e => {
             this.currentlyPlaying -= 1;
+            this.playingFiles = this.playingFiles.filter(e => e !== file);
         });
     }
 }

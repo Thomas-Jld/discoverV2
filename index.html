@@ -38,17 +38,16 @@
         </div>
       </div>
 
-      <div hidden>
-        <p>Playing Range Offset</p>
-        <input type="range" min="0" max="0.02" value="0.0002" step="0.00001" class="slider" id="playing-range-slider">
-      </div>
 
-      <div class="row">
-        <p>Move area</p>
-        <button id="move-left-button">LEFT</button>
-        <button id="move-right-button">RIGHT</button>
-        <button id="move-up-button">UP</button>
-        <button id="move-down-button">DOWN</button>
+      <div class="two-col">
+        <div>
+          <p>Playing Range Offset</p>
+          <input type="range" min="0" max="0.002" value="0.0002" step="0.00001" class="slider" id="playing-range-slider">
+        </div>
+        <div class="align-right">
+          <p>Path Following Speed</p>
+          <input type="range" min="0" max="1" value="0.1" step="0.01" class="slider" id="path-speed-slider">
+        </div>
       </div>
 
       <div class="two-col">
@@ -60,9 +59,25 @@
           <button type="button" id="clear-path-button">Clear Path</button>
           <button type="button" id="restart-path-button">Restart Path</button>
         </div>
-        <div class="align-right">
-          <p>Path Following Speed</p>
-          <input type="range" min="0" max="1" value="0.1" step="0.01" class="slider" id="path-speed-slider">
+        <div class="three-col">
+          <div class="row">
+            <p>Show Gradient</p>
+            <input type="checkbox" id="show-gradient-checkbox" checked>
+          </div>
+
+          <div class="row">
+            <p>Follow Listener</p>
+            <input type="checkbox" id="follow-listener-checkbox">
+          </div>
+
+          <div class="row">
+            <p>Move area</p>
+            <button id="move-left-button">LEFT</button>
+            <button id="move-right-button">RIGHT</button>
+            <button id="move-up-button">UP</button>
+            <button id="move-down-button">DOWN</button>
+          </div>
+
         </div>
 
       </div>

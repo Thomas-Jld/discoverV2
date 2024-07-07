@@ -136,6 +136,17 @@ button, select {
   width: 45%;
 }
 
+.three-col {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-between;
+}
+
+/* .three-col > div {
+  width: 30%;
+} */
+
 .align-right {
   text-align: right;
   display: flex;

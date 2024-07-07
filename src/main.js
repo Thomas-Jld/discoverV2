@@ -17,7 +17,7 @@ var STARTING_POINT = [0.66944, 0.8356167];
 
 
 const searchLimit = 30;
-const maxAudio = 10;
+const maxAudio = 15;
 
 let MODE = 'manual';
 
@@ -34,8 +34,6 @@ img.src = `./${MAP_IMAGE}.png`;
 const audibleRangeSlider = document.getElementById('audible-range-slider');
 const playingRangeSlider = document.getElementById('playing-range-slider');
 const visibleRangeSlider = document.getElementById('visible-range-slider');
-const audibleRangeDiv = document.getElementById('audible-range-div');
-const playingRangeDiv = document.getElementById('playing-range-div');
 const visibleRangeDiv = document.getElementById('visible-range-div');
 
 const moveLeftButton = document.getElementById('move-left-button');
@@ -50,6 +48,14 @@ const clearPathButton = document.getElementById('clear-path-button');
 const restartPathButton = document.getElementById('restart-path-button');
 
 const pathSpeedSlider = document.getElementById('path-speed-slider');
+
+const logTapperSlopeSlider = document.getElementById("log-tapper-slope-slider");
+const minGainSlider = document.getElementById("min-gain-slider");
+const maxGainSlider = document.getElementById("max-gain-slider");
+const gainModeSelect = document.getElementById("gain-mode-select");
+
+const showGradientCheckbox = document.getElementById("show-gradient-checkbox");
+const followListenerCheckbox = document.getElementById("follow-listener-checkbox");
 // *************** GUI *************** //
 
 
@@ -146,12 +152,149 @@ const tree = new kdTree(points2d, customDist, [0, 1]);
 // *************** KD-Tree *************** //
 
 
+const listenerGroup = new THREE.Group();
+scene.add(listenerGroup);
 
+
+// *************** Torus Audible Range *************** //
+const torusGeometry = new THREE.TorusGeometry( 1, 0.01, 16, 100 );
+const torusMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+const audibleRangeTorus = new THREE.Mesh( torusGeometry, torusMaterial );
+audibleRangeTorus.rotation.x = Math.PI / 2;
+audibleRangeTorus.position.x = STARTING_POINT[0];
+audibleRangeTorus.position.y = -10;
+audibleRangeTorus.position.z = STARTING_POINT[1];
+let r = parseFloat(audibleRangeSlider.value);
+audibleRangeTorus.scale.set(r, r, r);
+audibleRangeTorus.visible = false;
+listenerGroup.add( audibleRangeTorus );
+// *************** Torus Audible Range *************** //
+
+
+
+// *************** Torus Playing Range *************** //
+const playingRangeTorusGeometry = new THREE.TorusGeometry( 1, 0.008, 16, 100 );
+const playingRangeTorusMaterial = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+const playingRangeTorus = new THREE.Mesh( torusGeometry, playingRangeTorusMaterial );
+playingRangeTorus.rotation.x = Math.PI / 2;
+playingRangeTorus.position.x = STARTING_POINT[0];
+playingRangeTorus.position.y = -10;
+playingRangeTorus.position.z = STARTING_POINT[1];
+let R = r + parseFloat(playingRangeSlider.value);
+playingRangeTorus.scale.set(R, R, R);
+playingRangeTorus.visible = false;
+listenerGroup.add( playingRangeTorus );
+// *************** Torus Playing Range *************** //
+
+
+// *************** Disk Roll-off Shader *************** //
+const diskGeometry = new THREE.RingGeometry( 0.0, 1.0, 32, 32 );
+// const diskMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+const diskMaterial = new THREE.ShaderMaterial({
+    vertexShader: /* glsl */`
+        varying vec2 vUv;
+
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: /* glsl */`
+        varying vec2 vUv;
+        uniform float slope;
+        uniform float minGain;
+        uniform float maxGain;
+        uniform float rollOffType;
+        void main() {
+            // float r = pow(pow((vUv.x - 0.5)*2.0, 2.0) + pow((vUv.y  - 0.5)*2.0, 2.0), 2.0);
+
+            float r = 2.0*distance(vUv, vec2(0.5));
+            float s = slope;
+            if (slope == 0.5) {
+                s = 0.51;
+            }
+
+            float b = pow((1.0 / s - 1.0), 2.0);
+            float a = 1.0 / (b - 1.0);
+            float y = 0.0;
+
+            if (rollOffType == 0.0) {
+                y = a * (pow(b, 1.0 - r) - 1.0);
+            } else if (rollOffType == 1.0) {
+                y = 1.0 - r;
+            }else if (rollOffType == 2.0) {
+                y = 1.0 - pow(r, 2.0);
+            }else if (rollOffType == 3.0) {
+                y = pow(1.0 - r, 2.0);
+            }else if (rollOffType == 4.0) {
+                y = 1.0 - pow(r, 3.0);
+            }else if (rollOffType == 5.0) {
+                y = pow(1.0 - r, 3.0);
+            }
+
+            gl_FragColor = vec4(vec3(1.0), minGain + (maxGain - minGain) * y);
+        }
+    `,
+    transparent: true,
+    opacity: 1.0,
+    // depthWrite: false,
+    depthTest: true,
+    side: THREE.DoubleSide,
+    uniforms: {
+        slope: { value: parseFloat(logTapperSlopeSlider.value) },
+        minGain: { value: parseFloat(minGainSlider.value)},
+        maxGain: { value: parseFloat(maxGainSlider.value)},
+        rollOffType: { value: 0.0},
+    }
+});
+const disk = new THREE.Mesh( diskGeometry, diskMaterial );
+disk.rotation.x = -Math.PI / 2;
+disk.position.x = STARTING_POINT[0];
+disk.position.y = -0.00001;
+disk.position.z = STARTING_POINT[1];
+disk.visible = false;
+audibleRangeTorus.scale.set(r, r, r);
+listenerGroup.add( disk );
+logTapperSlopeSlider.addEventListener('input', (event) => {
+    diskMaterial.uniforms.slope.value = parseFloat(event.target.value);
+})
+minGainSlider.addEventListener('input', (event) => {
+    diskMaterial.uniforms.minGain.value = parseFloat(event.target.value);
+})
+maxGainSlider.addEventListener('input', (event) => {
+    diskMaterial.uniforms.maxGain.value = parseFloat(event.target.value);
+})
+
+gainModeSelect.addEventListener("change", () => {
+    let rollOffType = 0.0;
+    switch (gainModeSelect.value) {
+        case "log-tapper":
+            rollOffType = 0.0
+            break;
+        case "linear":
+            rollOffType = 1.0
+            break;
+        case "square":
+            rollOffType = 2.0
+            break;
+        case "inverse-square":
+            rollOffType = 3.0
+            break;
+        case "power-three":
+            rollOffType = 4.0
+            break;
+        case "inverse-power-three":
+            rollOffType = 5.0
+            break;
+    }
+    diskMaterial.uniforms.rollOffType.value = rollOffType;
+});
+
+showGradientCheckbox.addEventListener("change", (event) => {
+    disk.visible = event.target.checked;
+});
 
 // *************** Range Functions *************** //
-function planeToCanvasSize(value) {
-    return 600 * value / camera.position.y;
-}
 
 // Converts the canvas coordinates to the world coordinates using the camera
 function canvasToPlaneCoordinates(x, y) {
@@ -178,37 +321,42 @@ function planeToCanvasCoordinates(x, y) {
     return {x: newX, y: newY};
 }
 
-function updatePlayingOffset() {
-
-    // if (!playingRangeDiv.style.display) {
-    //     playingRangeDiv.style.display = 'block';
-    // }
-    const arsY = parseFloat(audibleRangeDiv.style.top);
-    const arsX = parseFloat(audibleRangeDiv.style.left);
-    const arsR = parseFloat(audibleRangeDiv.style.width);
-
-    const prsR = arsR + planeToCanvasSize(parseFloat(playingRangeSlider.value));
-    const prsY = arsY + (arsR - prsR) / 2;
-    const prsX = arsX + (arsR - prsR) / 2;
-    // console.log(prsR, prsY, prsX, arsR, arsY, arsX);
-    playingRangeDiv.style.width = `${prsR}px`;
-    playingRangeDiv.style.height = `${prsR}px`;
-    playingRangeDiv.style.top = `${prsY}px`;
-    playingRangeDiv.style.left = `${prsX}px`;
-}
 
 function updateAudibleRange(x, y, r) {
-    if (!audibleRangeDiv.style.display) {
-        audibleRangeDiv.style.display = 'block';
+    if (!audibleRangeTorus.visible) {
+        audibleRangeTorus.visible = true;
+        playingRangeTorus.visible = true;
+        disk.visible = showGradientCheckbox.checked;
     }
 
-    audibleRangeDiv.style.width = `${r}px`;
-    audibleRangeDiv.style.height = `${r}px`;
-    audibleRangeDiv.style.top = `${y}px`;
-    audibleRangeDiv.style.left = `${x}px`;
+    audibleRangeTorus.position.x = x;
+    audibleRangeTorus.position.y = 0;
+    audibleRangeTorus.position.z = y;
+    audibleRangeTorus.scale.set(r, r, r);
 
-    updatePlayingOffset();
+    let R = r + parseFloat(playingRangeSlider.value)
+    playingRangeTorus.position.x = x;
+    playingRangeTorus.position.y = 0;
+    playingRangeTorus.position.z = y;
+    playingRangeTorus.scale.set(R, R, R);
+
+
+    disk.position.x = x;
+    disk.position.z = y;
+    disk.scale.set(r, r, r);
+
+    if( followListenerCheckbox.checked ) {
+        camera.position.x = audibleRangeTorus.position.x;
+        camera.position.z = audibleRangeTorus.position.z;
+    }
 }
+
+followListenerCheckbox.addEventListener("change", (event) => {
+    if (event.target.checked) {
+        camera.position.x = audibleRangeTorus.position.x;
+        camera.position.z = audibleRangeTorus.position.z;
+    }
+})
 
 function updateVisibleRange() {
     const r = 600 * camera.position.y;
@@ -234,22 +382,14 @@ updateVisibleRange();
 // *************** Audio *************** //
 let nearestAudioPoints = [];
 let audioEngine;
-const currentPos = {x: 0, y: -10, z: 0};
 
 function loadAudio() {
     if(audioEngine) {
-        if(currentPos.y != -10) nearestAudioPoints = tree.nearest([currentPos.x, currentPos.z], searchLimit, audibleRangeSlider.value);
-        // console.log(nearestAudioPoints);
+        if(audibleRangeTorus.position.y != -10) nearestAudioPoints = tree.nearest([audibleRangeTorus.position.x, audibleRangeTorus.position.z], searchLimit, parseFloat(audibleRangeSlider.value) + parseFloat(playingRangeSlider.value));
         audioEngine.playNextInQueue(audioEngine.nodeNumber, nearestAudioPoints, audibleRangeSlider.value, maxAudio);
     }
 }
 
-// Loading loop: play the next audio in the queue every few seconds, based on the number of simultaneous audio
-// let loadingLoop = () => {
-//     loadAudio();
-//     setTimeout(loadingLoop, 200);
-// }
-// loadingLoop();
 setInterval(loadAudio, 100);
 // *************** Audio *************** //
 
@@ -260,36 +400,27 @@ setInterval(loadAudio, 100);
 
 // *************** Mouse Interactions *************** //
 audibleRangeSlider.addEventListener('input', (event) => {
-
-    const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-    const arsPrevX = parseFloat(audibleRangeDiv.style.left);
-    const arsPrevY = parseFloat(audibleRangeDiv.style.top);
-
-    const r = planeToCanvasSize(event.target.value);
-    const x = arsPrevX ? (arsPrevX - (r - arsPrevR) / 2) : 300;
-    const y = arsPrevY ? (arsPrevY - (r - arsPrevR) / 2) : 300;
-
-    updateAudibleRange(x, y, r);
+    updateAudibleRange(audibleRangeTorus.position.x, audibleRangeTorus.position.z, parseFloat(event.target.value));
 });
 
 playingRangeSlider.addEventListener('input', (event) => {
-    updatePlayingOffset();
+    updateAudibleRange(audibleRangeTorus.position.x, audibleRangeTorus.position.z, parseFloat(audibleRangeSlider.value));
 });
 
 visibleRangeSlider.addEventListener('input', (event) => {
+    const zoomedIn = camera.position.y > parseFloat(event.target.value);
+
+    if (zoomedIn) {
+        // Center camera on the audible range
+        camera.position.x = audibleRangeTorus.position.x;
+        camera.position.z = audibleRangeTorus.position.z;
+    }
+
+    updateVisibleRange();
+
     camera.position.y = parseFloat(event.target.value);
     camera.updateProjectionMatrix();
 
-    const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-    const arsPrevX = parseFloat(audibleRangeDiv.style.left);
-    const arsPrevY = parseFloat(audibleRangeDiv.style.top);
-
-    const r = planeToCanvasSize(audibleRangeSlider.value);
-    const x = arsPrevX ? (arsPrevX - 300) / (arsPrevR / r) + 300: 300;
-    const y = arsPrevY ? (arsPrevY - 300) / (arsPrevR / r) + 300 : 300;
-
-    updateAudibleRange(x, y, r);
-    updateVisibleRange();
 });
 
 const pointer = new THREE.Vector2();
@@ -304,18 +435,8 @@ canvas.addEventListener('pointerdown', (event) => {
         audioEngine = new AudioEngine(audio_ids);
     }
     if (MODE === 'manual') {
-        const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-        const ardR = isNaN(arsPrevR) ? planeToCanvasSize(audibleRangeSlider.value) : arsPrevR;
-
-        updateAudibleRange(event.offsetX - ardR / 2, event.offsetY - ardR / 2, ardR);
-
-        pointer.x = ( event.offsetX / 600 ) * 2 - 1;
-        pointer.y = - ( event.offsetY / 600 ) * 2 + 1;
-
         const point = canvasToPlaneCoordinates(event.offsetX, event.offsetY);
-        currentPos.x = point.x;
-        currentPos.y = 0;
-        currentPos.z = point.z;
+        updateAudibleRange(point.x, point.z, parseFloat(audibleRangeSlider.value));
     } else if (MODE === 'draw') {
         const point = canvasToPlaneCoordinates(event.offsetX, event.offsetY);
         autoPath.push([point.x, 0, point.z]);
@@ -332,15 +453,11 @@ canvas.addEventListener('pointerdown', (event) => {
 });
 
 img.addEventListener('pointerdown', (event) => {
+    if (!isPressingShift) return;
     camera.position.x = event.offsetX / 600;
     camera.position.z = event.offsetY / 600;
     camera.lookAt(camera.position.x, 0, camera.position.z);
 
-    const arsNewPos = planeToCanvasCoordinates(currentPos.x, currentPos.z);
-    const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-    const arsR = isNaN(arsPrevR) ? planeToCanvasSize(audibleRangeSlider.value) : arsPrevR;
-
-    updateAudibleRange(arsNewPos.x - arsR / 2, arsNewPos.y - arsR / 2, arsR);
     updateVisibleRange();
 });
 
@@ -359,15 +476,7 @@ function moveAlongPath() {
     position.y = startPoint[1] + (endPoint[1] - startPoint[1]) * progressOnSegment;
     position.z = startPoint[2] + (endPoint[2] - startPoint[2]) * progressOnSegment;
 
-    const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-    const arsR = isNaN(arsPrevR) ? planeToCanvasSize(audibleRangeSlider.value) : arsPrevR;
-
-    const point = planeToCanvasCoordinates(position.x, position.z);
-    currentPos.x = position.x;
-    currentPos.y = 0;
-    currentPos.z = position.z;
-
-    updateAudibleRange(point.x - arsR / 2, point.y - arsR / 2, arsR);
+    updateAudibleRange(position.x, position.z, parseFloat(audibleRangeSlider.value));
 
     progressOnSegment += parseFloat(pathSpeedSlider.value) / 100;
     if (progressOnSegment >= 1) {
@@ -400,114 +509,51 @@ function restartPath() {
 
 
 
-function shiftLeft(x) {
-    camera.position.x = x;
-    camera.lookAt(x, 0, camera.position.z);
-
-    const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-    const arsPrevY = parseFloat(audibleRangeDiv.style.top);
-    const arsPrevX = parseFloat(audibleRangeDiv.style.left);
-
-    const arsNewX = arsPrevX + 300;
-
-    updateAudibleRange(arsNewX, arsPrevY, arsPrevR);
-    updateVisibleRange();
-}
-
-function shiftRight(x) {
-    camera.position.x = x;
-    camera.lookAt(x, 0, camera.position.z);
-
-    const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-    const arsPrevY = parseFloat(audibleRangeDiv.style.top);
-    const arsPrevX = parseFloat(audibleRangeDiv.style.left);
-
-    const arsNewX = arsPrevX - 300;
-
-    updateAudibleRange(arsNewX, arsPrevY, arsPrevR);
-    updateVisibleRange();
-}
-
-function shiftUp(z) {
-    camera.position.z = z;
-    camera.lookAt(camera.position.x, 0, z);
-
-    const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-    const arsPrevY = parseFloat(audibleRangeDiv.style.top);
-    const arsPrevX = parseFloat(audibleRangeDiv.style.left);
-
-    const arsNewY = arsPrevY + 300;
-
-    updateAudibleRange(arsPrevX, arsNewY, arsPrevR);
-    updateVisibleRange();
-}
-
-function shiftDown(z) {
-    camera.position.z = z;
-    camera.lookAt(camera.position.x, 0, z);
-
-    const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-    const arsPrevY = parseFloat(audibleRangeDiv.style.top);
-    const arsPrevX = parseFloat(audibleRangeDiv.style.left);
-
-    const arsNewY = arsPrevY - 300;
-
-    updateAudibleRange(arsPrevX, arsNewY, arsPrevR);
-    updateVisibleRange();
-}
-
-
-
+let isPressingShift = false;
 window.addEventListener('keydown', (event) => {
+    const r = parseFloat(audibleRangeSlider.value);
+    let moved = false;
     if (event.key === 'ArrowUp' || event.key === 'w' || event.key === 'z') {
-
-        const arsPrevY = parseFloat(audibleRangeDiv.style.top);
-        const arsPrevX = parseFloat(audibleRangeDiv.style.left);
-        const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-
-        updateAudibleRange(arsPrevX, arsPrevY - arsPrevR * 0.01, arsPrevR);
-    } if (event.key === 'ArrowDown' || event.key === 's') {
-        const arsPrevY = parseFloat(audibleRangeDiv.style.top);
-        const arsPrevX = parseFloat(audibleRangeDiv.style.left);
-        const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-
-        updateAudibleRange(arsPrevX, arsPrevY + arsPrevR * 0.01, arsPrevR);
+        updateAudibleRange(audibleRangeTorus.position.x, audibleRangeTorus.position.z - r * 0.01, r);
+        moved = true;
     }
-    if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'q') {
-        const arsPrevY = parseFloat(audibleRangeDiv.style.top);
-        const arsPrevX = parseFloat(audibleRangeDiv.style.left);
-        const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-
-        updateAudibleRange(arsPrevX - arsPrevR * 0.01, arsPrevY, arsPrevR);
+    else if (event.key === 'ArrowDown' || event.key === 's') {
+        updateAudibleRange(audibleRangeTorus.position.x, audibleRangeTorus.position.z + r * 0.01, r);
+        moved = true;
     }
-    if (event.key === 'ArrowRight' || event.key === 'd') {
-        const arsPrevY = parseFloat(audibleRangeDiv.style.top);
-        const arsPrevX = parseFloat(audibleRangeDiv.style.left);
-        const arsPrevR = parseFloat(audibleRangeDiv.style.width);
-
-        updateAudibleRange(arsPrevX + arsPrevR * 0.01, arsPrevY, arsPrevR);
+    else if (event.key === 'ArrowLeft' || event.key === 'a' || event.key === 'q') {
+        updateAudibleRange(audibleRangeTorus.position.x - r * 0.01, audibleRangeTorus.position.z, r);
+        moved = true;
+    }
+    else if (event.key === 'ArrowRight' || event.key === 'd') {
+        updateAudibleRange(audibleRangeTorus.position.x + r * 0.01, audibleRangeTorus.position.z, r);
+        moved = true;
+    }
+    else if (event.key === 'Shift') {
+        isPressingShift = true;
     }
 
+    if (moved) {
 
-    const arsY = parseFloat(audibleRangeDiv.style.top);
-    const arsR = parseFloat(audibleRangeDiv.style.width);
-    const arsX = parseFloat(audibleRangeDiv.style.left);
+        const canvasCoords =  planeToCanvasCoordinates(audibleRangeTorus.position.x, audibleRangeTorus.position.z);
 
 
-    const point = canvasToPlaneCoordinates(arsX + arsR / 2, arsY + arsR / 2);
-    currentPos.x = point.x;
-    currentPos.y = 0;
-    currentPos.z = point.z;
+        // Shift the camera if the audible range is at the edge of the screen
+        if (canvasCoords.x <= 0) {
+            camera.position.x = camera.position.x - camera.position.y;
+        } else if (canvasCoords.x >= 600) {
+            camera.position.x = camera.position.x + camera.position.y;
+        } else if (canvasCoords.y <= 0) {
+            camera.position.z = camera.position.z - camera.position.y;
+        } else if (canvasCoords.y >= 600) {
+            camera.position.z = camera.position.z + camera.position.y;
+        }
+    }
+});
 
-    // Shift the camera if the audible range is at the edge of the screen
-    if (arsX + arsR / 2 <= 0) {
-        shiftLeft(camera.position.x - camera.position.y);
-    } else if (arsX + arsR / 2 >= 600) {
-        shiftRight(camera.position.x + camera.position.y);
-    } else if (arsY + arsR / 2 <= 0) {
-        shiftUp(camera.position.z - camera.position.y);
-    } else if (arsY + arsR / 2 >= 600) {
-        shiftDown(camera.position.z + camera.position.y);
+window.addEventListener('keyup', (event) => {
+    if (event.key === 'Shift') {
+        isPressingShift = false;
     }
 });
 
