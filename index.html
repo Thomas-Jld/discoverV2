@@ -13,7 +13,7 @@
         <div id="canvas-container" class="container">
           <canvas id="canvas"></canvas>
           <div id="audible-range-div" class="range-div"></div>
-          <div id="playing-range-div" class="range-div"></div>
+          <div id="playing-range-div" class="range-div" hidden></div>
         </div>
       </div>
 
@@ -26,18 +26,23 @@
       </div>
     </div>
     <div id="controls">
-      <div>
-        <p>Audible range</p>
-        <input type="range" min="0.00001" max="0.02" value="0.001" step="0.00001" class="slider" id="audible-range-slider">
+
+      <div class="two-col">
+        <div>
+          <p>Audible range</p>
+          <input type="range" min="0.00001" max="0.02" value="0.001" step="0.00001" class="slider" id="audible-range-slider">
+        </div>
+        <div class="align-right">
+          <p>Visible Range</p>
+          <input type="range" min="0" max="1" value="0.007" step="0.001" class="slider" id="visible-range-slider">
+        </div>
       </div>
-      <div>
+
+      <div hidden>
         <p>Playing Range Offset</p>
         <input type="range" min="0" max="0.02" value="0.0002" step="0.00001" class="slider" id="playing-range-slider">
       </div>
-      <div>
-        <p>Visible Range</p>
-        <input type="range" min="0" max="1" value="0.007" step="0.001" class="slider" id="visible-range-slider">
-      </div>
+
       <div class="row">
         <p>Move area</p>
         <button id="move-left-button">LEFT</button>
@@ -45,16 +50,52 @@
         <button id="move-up-button">UP</button>
         <button id="move-down-button">DOWN</button>
       </div>
+
+      <div class="two-col">
+
+        <div class="align-center">
+          <button type="button" id="manual-mode-button" class="selected-button">Manual Mode</button>
+          <button type="button" id="draw-mode-button">Draw Path Mode</button>
+          <button type="button" id="play-mode-button">Play Path Mode</button>
+          <button type="button" id="clear-path-button">Clear Path</button>
+          <button type="button" id="restart-path-button">Restart Path</button>
+        </div>
+        <div class="align-right">
+          <p>Path Following Speed</p>
+          <input type="range" min="0" max="1" value="0.1" step="0.01" class="slider" id="path-speed-slider">
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="two-col">
       <div>
-        <button type="button" id="manual-mode-button" class="selected-button">Manual Mode</button>
-        <button type="button" id="draw-mode-button">Draw Path Mode</button>
-        <button type="button" id="play-mode-button">Play Path Mode</button>
-        <button type="button" id="clear-path-button">Clear Path</button>
-        <button type="button" id="restart-path-button">Restart Path</button>
+        <div class="row">
+          <p>Roll-off Mode</p>
+          <select name="gain-mode-select" id="gain-mode-select">
+            <option value="log-tapper">Log Tapper</option>
+            <option value="linear">Linear</option>
+            <option value="square">Square</option>
+            <option value="inverse-square">Inverse Square</option>
+            <option value="power-three">Power Three</option>
+            <option value="inverse-power-three">Inverse Power Three</option>
+          </select>
+          <input type="range" min="0.01" max="0.99" value="0.45" step="0.01" class="slider" id="log-tapper-slope-slider">
+        </div>
+        <div>
+          <p>Min Gain</p>
+          <input type="range" min="0" max="1" value="0.0" step="0.01" class="slider" id="min-gain-slider">
+        </div>
+        <div>
+          <p>Max Gain</p>
+          <input type="range" min="0" max="1" value="1.0" step="0.01" class="slider" id="max-gain-slider">
+        </div>
       </div>
       <div>
-        <p>Path Following Speed</p>
-        <input type="range" min="0" max="1" value="0.1" step="0.01" class="slider" id="path-speed-slider">
+        <p>Currently playing: </p>
+        <div id="currently-playing"></div>
       </div>
     </div>
     <script type="module" src="/src/main.js"></script>

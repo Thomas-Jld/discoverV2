@@ -23,3 +23,18 @@ npm install
 ```sh
 npm run dev
 ```
+
+## Roll-off modes
+
+Graph of the gain based on the distance from the center of the audio listener (0 is the center, 1 is the edges).
+![Image](docs/images/gain-functions.png)
+
+- Purple: Inverse Power Three
+- Blue: Inverse Square
+- Red: Linear
+- Green: Square
+- Yellow: Power Three
+
+Log Tapper based on https://electronics.stackexchange.com/a/341052
+
+![Image](docs/images/log-tapper.png)

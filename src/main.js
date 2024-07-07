@@ -180,9 +180,9 @@ function planeToCanvasCoordinates(x, y) {
 
 function updatePlayingOffset() {
 
-    if (!playingRangeDiv.style.display) {
-        playingRangeDiv.style.display = 'block';
-    }
+    // if (!playingRangeDiv.style.display) {
+    //     playingRangeDiv.style.display = 'block';
+    // }
     const arsY = parseFloat(audibleRangeDiv.style.top);
     const arsX = parseFloat(audibleRangeDiv.style.left);
     const arsR = parseFloat(audibleRangeDiv.style.width);
@@ -240,7 +240,7 @@ function loadAudio() {
     if(audioEngine) {
         if(currentPos.y != -10) nearestAudioPoints = tree.nearest([currentPos.x, currentPos.z], searchLimit, audibleRangeSlider.value);
         // console.log(nearestAudioPoints);
-        audioEngine.playNextInQueue(audioEngine.nodeNumber, nearestAudioPoints, maxAudio);
+        audioEngine.playNextInQueue(audioEngine.nodeNumber, nearestAudioPoints, audibleRangeSlider.value, maxAudio);
     }
 }
 
@@ -250,7 +250,7 @@ function loadAudio() {
 //     setTimeout(loadingLoop, 200);
 // }
 // loadingLoop();
-setInterval(loadAudio, 300);
+setInterval(loadAudio, 100);
 // *************** Audio *************** //
 
 
