@@ -29,5 +29,5 @@ coverage
 
 sample
 src/assets/*.json
-*.png
+public/*.png
 .vscode
